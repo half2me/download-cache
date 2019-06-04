@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test worker</title>
+    <script>
+      function wipeIDB() {
+        const DBOpenRequest = window.indexedDB.open("keyval-store", 4);
+        DBOpenRequest.onsuccess = function(event) {
+          let db = DBOpenRequest.result;
+          let trx = db.transaction(['keyval-store'], "readwrite");
+          trx.oncomplete = function (event) {
+            console.log("Transaction done!");
+          };
+          trx.onerror = function (event) {
+            console.log("Transaction failed :(");
+          };
+          let store = trx.objectStore("keyval");
+          let storeReq = store.clear();
+
+          storeReq.onsuccess = function (event) {
+            console.log("Cache Wiped!");
+          };
+        };
+      }
+
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register("service-worker.js").then(function (registration) {
+            // Registration was successful
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, function (err) {
+            // registration failed :(
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+        navigator.serviceWorker.register('service-worker.js');
+      } else {
+        console.error("Sorry, service workers are not available :(");
+      }
+    </script>
+</head>
+<body>
+<a href="large.bin">Go to a large file</a> <br>
+<a href="large.bin" download>Download a large file</a> <br>
+<button onclick="wipeIDB()">Wipe Cache</button>
+</body>
+</html>

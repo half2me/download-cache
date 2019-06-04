@@ -1,0 +1,20 @@
+{
+  "name": "w",
+  "version": "1.0.0",
+  "description": "W Worker",
+  "main": "src/index.js",
+  "scripts": {
+    "watch": "webpack --mode development --watch",
+    "build": "webpack --mode production",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "webpack": "^4.32.2",
+    "webpack-cli": "^3.3.2"
+  },
+  "dependencies": {
+    "idb": "^4.0.3"
+  }
+}
