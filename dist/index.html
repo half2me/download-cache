@@ -3,40 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <title>Test worker</title>
+    <script src="/dwn.js"></script>
     <script>
-      function wipeIDB() {
-        const DBOpenRequest = window.indexedDB.open("keyval-store", 4);
-        DBOpenRequest.onsuccess = function(event) {
-          let db = DBOpenRequest.result;
-          let trx = db.transaction(['keyval-store'], "readwrite");
-          trx.oncomplete = function (event) {
-            console.log("Transaction done!");
-          };
-          trx.onerror = function (event) {
-            console.log("Transaction failed :(");
-          };
-          let store = trx.objectStore("keyval");
-          let storeReq = store.clear();
-
-          storeReq.onsuccess = function (event) {
-            console.log("Cache Wiped!");
-          };
-        };
-      }
-
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-          navigator.serviceWorker.register("service-worker.js").then(function (registration) {
-            // Registration was successful
-            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-          }, function (err) {
-            // registration failed :(
-            console.log('ServiceWorker registration failed: ', err);
-          });
+        window.addEventListener('load', e => {
+          dwn().then(h => window.dwnHandler = h);
         });
-        navigator.serviceWorker.register('service-worker.js');
-      } else {
-        console.error("Sorry, service workers are not available :(");
+      function wipeIDB() {
+        let DBDeleteRequest = window.indexedDB.deleteDatabase("keyval-store");
+
+        console.log("Wiping Cache");
+
+        DBDeleteRequest.onsuccess = function (event) {
+          console.log("Cache Wiped");
+        };
+        DBDeleteRequest.onblocked = function (event) {
+          console.log("Cache Wipe Blocked");
+          console.log(event);
+        };
+        DBDeleteRequest.onerror = function (event) {
+          console.log("Cache Already Empty");
+        };
       }
     </script>
 </head>
