@@ -1,7 +1,8 @@
-import { get, set, del } from 'idb-keyval';
+import { get, keys } from 'idb-keyval';
 
-const exp = /\.bin(\?.*)?$/;
-const blockSize = 512;
+const prefix = '/dwn';
+
+const exp = /\/dwn(.+)$/;
 
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -14,105 +15,45 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  e.respondWith(fetch(e.request.url, {
-    method: 'HEAD',
-    cache: "no-store",
-    signal: e.request.signal,
-  }).then(headRes => {
+  const origUrl = url.match(exp)[1];
+  console.log("FETCH captured", origUrl);
 
-    e.request.signal.addEventListener('abort', () => console.log("ABORT ABORT!"));
-
-    const size = parseInt(headRes.headers.get('Content-length'));
-    console.log(`HEAD: [size: ${size}]`);
-
-    // Setup streams
-    let rStream = new ReadableStream({
-      async start(controller) {
-        console.log("Streaming...");
-        let i=0;
-        let bytesProcessed = 0;
-
-        async function wipeCache() {
-          //console.log("Wiping cache");
-          //for (let j=0; j<i; j++) {
-          //  await del(hash(url, j));
-          //}
-        }
-
-        while(true) {
-          if (bytesProcessed === size) {
-            console.log("Entire file served from cache");
-            await wipeCache();
-            controller.close();
-            return true;
-          }
-
-          let chunk = await get(hash(url, i));
-          if (chunk) {
-            // Chunk is already cached, serve and get next chunk
-            console.log(`Serving chunk ${i} from cache`);
-            chunk.forEach(blk => {
-              bytesProcessed += blk.length;
-              controller.enqueue(blk)
-            });
-            i++;
-          } else {
-            // chunk is not cached, download as usual
-            break;
-          }
-        }
-
-        // Fetch resource with correct range set
-        console.log("Fetching range: ", bytesProcessed, '-', size-1);
-        const res = await fetch(url, {
-          signal: e.request.signal,
-          headers: {Range: `bytes=${bytesProcessed}-${size-1}`},
-          cache: "no-store",
-        });
-        const reader = res.body.getReader();
-
-        let buf = [];
-
-        const flushBuf = async () => {
-          if (buf.length > 0) {
-            console.log(`Caching chunk ${i}`);
-            await set(hash(url, i), buf);
-            buf = [];
-            i++;
-          }
-        };
-
-        while(true) {
-          let {done, value} = await reader.read();
-          if (done) {
-            console.log("Stream closing");
-            await flushBuf(); // if we are wiping cache on completion, we don't need this
-            await wipeCache();
-            controller.close();
-            return true;
-          }
-
-          bytesProcessed += value.length;
-          controller.enqueue(value); // push new data through
-          buf.push(value); // but also keep in our buffer
-          // Clear buf if full
-          if (buf.length === blockSize) {
-            await flushBuf();
-          }
-        }
-      },
-      pull(controller) {
-        console.log("pull method used on stream");
-      },
-      cancel(reason) {
-        console.log("Stream cancelled!");
-      },
+  e.respondWith((async () => {
+    // first get info about cached data and size
+    const cachedBlocks = (await keys()).filter(k => k.startsWith(origUrl));
+    const size = cachedBlocks.reduce((pre, cur) => {
+      const exp = /\[\d+-(\d+)]$/;
+      const a = pre.match(exp)[1];
+      const b = cur.match(exp)[1];
+      return a > b ? a : b;
     });
+    const firstBlock = cachedBlocks.find(b => /\[0-\d+]$/.test(b));
 
-    // Send back the response
-    return new Response(rStream, pick(headRes,'status', 'statusText', 'headers'));
-  }));
+    return new Response(new ReadableStream({
+        async start(controller) {
+          for(
+            let i = firstBlock;
+            i;
+            cachedBlocks.find(b => {
+              const nextByte = i.match(/\[\d+-(\d+)]$/)[1] + 1;
+              return new RegExp(`^${origUrl}\[${nextByte}-d+]$`).test(b);
+            })
+            ) {
+            console.log("serving ", i);
+            controller.enqueue(await get(i));
+          }
+          controller.close();
+        },
+        pull() {},
+        cancel() {},
+      }),
+      {status: 200, statusText: 'OK', headers: new Headers({
+          'Content-length': size,
+          'Content-Disposition': 'attachment',
+      })}
+    )
+  })());
 });
 
 const pick = (O, ...K) => K.reduce((o, k) => (o[k]=O[k], o), {});
-const hash = (url, block) => url + block;
+const hash = (url, from, to) => `${url}[${from}-${to}]`;

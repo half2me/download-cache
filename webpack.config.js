@@ -1,12 +1,22 @@
 const path = require('path');
 
-module.exports = {
-  entry: {
-    dwn: './src/index.js',
-    sw: './src/sw.js',
+module.exports = [
+  {
+    entry: './src/index.js',
+    output: {
+      library: 'dwn',
+      libraryTarget: 'umd',
+      libraryExport: 'default',
+      globalObject: 'this',
+      path: path.resolve(__dirname, 'dist'),
+      filename: 'dwn.js',
+    },
   },
-  output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: '[name].js',
-  },
-};
+  {
+    entry: './src/sw.js',
+    output: {
+      path: path.resolve(__dirname, 'dist'),
+      filename: 'sw.js',
+    }
+  }
+];

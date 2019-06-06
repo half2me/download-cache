@@ -5,9 +5,22 @@
     <title>Test worker</title>
     <script src="/dwn.js"></script>
     <script>
-        window.addEventListener('load', e => {
-          dwn().then(h => window.dwnHandler = h);
+        window.addEventListener('load', () => {
+          window.dwn.init().then(() => console.log("dwn init done"));
         });
+        let handle;
+        function cancel() {
+          if (handle) {
+            handle.abort();
+          }
+        }
+        function download() {
+            cancel();
+            handle = window.dwn.download({url: '/large.bin'});
+            handle.promise
+              .then(() => console.log("Download finished!"))
+              .catch(() => console.error("Download failed!"));
+        }
       function wipeIDB() {
         let DBDeleteRequest = window.indexedDB.deleteDatabase("keyval-store");
 
@@ -27,8 +40,8 @@
     </script>
 </head>
 <body>
-<a href="large.bin">Go to a large file</a> <br>
-<a href="large.bin" download>Download a large file</a> <br>
+<button onclick="download()">Download a large file</button> <br>
+<button onclick="cancel()">Cancel</button> <br>
 <button onclick="wipeIDB()">Wipe Cache</button>
 </body>
 </html>
