@@ -10,7 +10,11 @@ export default {
     const controller = new AbortController();
 
     return {
-      abort() {controller.abort()},
+      controller,
+      abort() {
+        this.controller.abort();
+        console.log("Aborting stream");
+      },
       promise: down({url, blockSize, signal: controller.signal})
         .then(() => {
           const link = document.createElement('a');
