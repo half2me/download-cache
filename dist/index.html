@@ -16,7 +16,7 @@
         }
         function download() {
             cancel();
-            handle = window.dwn.download({url: '/large.bin'});
+            handle = window.dwn.download({url: '/small.txt', blockSize: 2 / (2**20)});
             handle.promise
               .then(() => console.log("Download finished!"))
               .catch(() => console.error("Download failed!"));

@@ -1,7 +1,5 @@
 import { get, keys } from 'idb-keyval';
 
-const prefix = '/dwn-cache';
-
 const exp = /\/dwn-cache(.+)$/;
 
 self.addEventListener('install', e => {
@@ -16,7 +14,6 @@ self.addEventListener('fetch', e => {
   }
 
   const origUrl = url.match(exp)[1];
-  console.log("FETCH captured", origUrl);
 
   e.respondWith((async () => {
     // first get info about cached data and size
@@ -33,11 +30,12 @@ self.addEventListener('fetch', e => {
             let i = firstBlock;
             i;
             i = cachedBlocks.find(b => {
-              const nextByte = i.match(/\[\d+-(\d+)]$/)[1] + 1;
-              return new RegExp(`^${origUrl}\[${nextByte}-d+]$`).test(b);
+              const nextByte = parseInt(i.match(/\[\d+-(\d+)]$/)[1]) + 1;
+              const exp = new RegExp(`\\[${nextByte}-\\d+]$`);
+              return exp.test(b);
             })
             ) {
-            console.log("serving ", i);
+            console.log("serving from cache ", i);
             controller.enqueue(await get(i));
           }
           controller.close();

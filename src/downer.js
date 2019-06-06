@@ -10,7 +10,11 @@ export default async ({url, blockSize, signal}) => {
 
   let results = await Promise.all(chunks
     .filter(([low, high]) => !cached.includes(hash(url, low, high)))
-    .map(([low, high]) => fetch(url, {headers: {Range: `bytes=${low}-${high-1}`}, signal}).then(async res => {
+    .map(([low, high]) => fetch(url, {
+      headers: {Range: `bytes=${low}-${high}`},
+      cache: 'no-cache',
+      signal,
+    }).then(async res => {
       const key = hash(url, low, high);
       const data = new Uint8Array(await res.arrayBuffer());
       await set(key, data);
@@ -28,8 +32,8 @@ const chunkGen = (num, chunkSize) => {
     if (high > num) {
       high = num;
     }
-    ret.push([i, high]);
-    i += chunkSize;
+    ret.push([i, high-1]);
+    i = high;
   }
   return ret;
 };
