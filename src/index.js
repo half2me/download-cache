@@ -1,9 +1,9 @@
 import down from './downer';
 
 export default {
-  init({sw = 'sw.js', blockSize = 64, prefix = '/dwn'} = {}) {
+  init({sw = 'sw.js', blockSize = 16, prefix = '/dwn-cache'} = {}) {
     this.blockSize = blockSize;
-    this.prefix = '/dwn';
+    this.prefix = prefix;
     return navigator.serviceWorker.register(sw);
   },
   download({url, blockSize = this.blockSize}) {

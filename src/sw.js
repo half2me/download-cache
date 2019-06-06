@@ -1,8 +1,8 @@
 import { get, keys } from 'idb-keyval';
 
-const prefix = '/dwn';
+const prefix = '/dwn-cache';
 
-const exp = /\/dwn(.+)$/;
+const exp = /\/dwn-cache(.+)$/;
 
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -21,12 +21,10 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     // first get info about cached data and size
     const cachedBlocks = (await keys()).filter(k => k.startsWith(origUrl));
-    const size = cachedBlocks.reduce((pre, cur) => {
-      const exp = /\[\d+-(\d+)]$/;
-      const a = pre.match(exp)[1];
-      const b = cur.match(exp)[1];
-      return a > b ? a : b;
-    });
+    const size = cachedBlocks.reduce((prev, cur) => {
+      const num = cur.match(/\[\d+-(\d+)]$/)[1];
+      return prev > num ? prev : num;
+    }, 0);
     const firstBlock = cachedBlocks.find(b => /\[0-\d+]$/.test(b));
 
     return new Response(new ReadableStream({
@@ -34,7 +32,7 @@ self.addEventListener('fetch', e => {
           for(
             let i = firstBlock;
             i;
-            cachedBlocks.find(b => {
+            i = cachedBlocks.find(b => {
               const nextByte = i.match(/\[\d+-(\d+)]$/)[1] + 1;
               return new RegExp(`^${origUrl}\[${nextByte}-d+]$`).test(b);
             })
